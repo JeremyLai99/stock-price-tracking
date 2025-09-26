@@ -1,5 +1,5 @@
 # Install packages
-pip install yfinance matplotlib --quiet
+!pip install yfinance matplotlib --quiet
 
 import yfinance as yf
 import matplotlib.pyplot as plt
