@@ -1,5 +1,6 @@
 # Install packages
-!pip install yfinance matplotlib --quiet
+# pip install yfinance matplotlib
+
 
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-%matplotlib inline
+plt.show()
 plt.style.use('default')  # Use clean style
 
 print("✅ Setup completed successfully")
