@@ -1,6 +1,5 @@
-# Install packages
-# pip install yfinance matplotlib
-
+# 本地 Python 環境版本
+# 請先在終端機執行: pip install yfinance matplotlib
 
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -9,34 +8,52 @@ import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-plt.show()
-plt.style.use('default')  # Use clean style
+# 設定中文字體支援（如果需要的話）
+# plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
+
+plt.style.use('default')
 
 print("✅ Setup completed successfully")
+print("=" * 60)
 
 # Input stock symbols
 symbols_input = input("Enter US stock symbols separated by comma (e.g., AAPL,MSFT,TSLA): ")
 symbols = [s.strip().upper() for s in symbols_input.split(",")]
 
-print(f"Will analyze: {', '.join(symbols)}")
-print("=" * 50)
+print(f"\nWill analyze: {', '.join(symbols)}")
+print("=" * 60)
 
 # Analyze each stock
 for i, symbol in enumerate(symbols):
     try:
         print(f"\n📊 Analyzing {symbol} ({i+1}/{len(symbols)})")
         
-        # Download 15 months data from Yahoo Finance (to show complete 200-day MA in 6-month chart)
+        # Download 15 months data from Yahoo Finance
+        print(f"   Downloading data for {symbol}...")
         data = yf.download(symbol, period="15mo", progress=False)
         
         # Check if data exists
         if data.empty:
-            print(f"❌ No data found for {symbol}. Please check the symbol.")
+            print(f"❌ No data found for {symbol}. Please check if the symbol is correct.")
+            print(f"   Skipping {symbol} and continuing with next stock...\n")
             continue
         
         # Handle MultiIndex columns if present
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.droplevel(1)
+        
+        # Verify we have the Close price column
+        if 'Close' not in data.columns:
+            print(f"❌ Invalid data structure for {symbol}. Skipping...")
+            continue
+        
+        # Check if we have enough data
+        if len(data) < 50:
+            print(f"⚠️ Insufficient data for {symbol} (only {len(data)} days). Skipping...")
+            continue
+        
+        print(f"   ✅ Successfully downloaded {len(data)} days of data")
         
         # Calculate 20-day and 200-day moving averages (using full data)
         data['MA20'] = data['Close'].rolling(window=20).mean()
@@ -46,7 +63,7 @@ for i, symbol in enumerate(symbols):
         data_6m = data.tail(130)  # Approximately 6 months of trading days
 
         # Create the chart (using 6-month data)
-        plt.figure(figsize=(6, 3.5))
+        plt.figure(figsize=(10, 6))
         
         # Main stock price line
         plt.plot(data_6m.index, data_6m['Close'], 
@@ -62,7 +79,7 @@ for i, symbol in enumerate(symbols):
                 color='#F24236',
                 alpha=0.8)
         
-        # 200-day moving average (now displays properly)
+        # 200-day moving average
         plt.plot(data_6m.index, data_6m['MA200'], 
                 label='200-Day Moving Average', 
                 linestyle=':', 
@@ -73,9 +90,9 @@ for i, symbol in enumerate(symbols):
         # Chart formatting
         plt.title(f"{symbol} - 6 Month Price Chart with Moving Averages", 
                  fontsize=14, fontweight='bold', pad=15)
-        plt.xlabel("Date", fontsize=10)
-        plt.ylabel("Price (USD)", fontsize=10)
-        plt.legend(fontsize=9, loc='best')
+        plt.xlabel("Date", fontsize=11)
+        plt.ylabel("Price (USD)", fontsize=11)
+        plt.legend(fontsize=10, loc='best')
         plt.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
         plt.xticks(rotation=45)
         
@@ -89,6 +106,8 @@ for i, symbol in enumerate(symbols):
                     arrowprops=dict(arrowstyle='->', color='black', alpha=0.5))
         
         plt.tight_layout()
+        
+        # Show the plot (本地環境需要這行)
         plt.show()
 
         # Calculate statistics (using 6-month data)
@@ -106,7 +125,7 @@ for i, symbol in enumerate(symbols):
         drawdown = (data_6m['Close'] - rolling_max) / rolling_max * 100
         max_drawdown = drawdown.min()
         
-        print(f"📈 {symbol} Analysis Results:")
+        print(f"\n📈 {symbol} Analysis Results:")
         print(f"   Latest Price: ${end_price:.2f}")
         print(f"   6-Month Return: {return_rate:+.2f}%")
         print(f"   Average Price: ${avg_price:.2f}")
@@ -129,10 +148,15 @@ for i, symbol in enumerate(symbols):
         
         print(f"   Technical Trend: {trend}")
         
+    except KeyboardInterrupt:
+        print(f"\n⚠️ Analysis interrupted by user")
+        break
     except Exception as e:
         print(f"❌ Error analyzing {symbol}: {str(e)}")
+        print(f"   Skipping {symbol} and continuing with next stock...")
         continue
     
     print("-" * 60)
 
 print(f"\n✅ Analysis completed! Processed {len(symbols)} stocks")
+print("\nClose all chart windows to exit the program.")
