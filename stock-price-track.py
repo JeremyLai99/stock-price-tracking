@@ -66,6 +66,31 @@ def create_interactive_chart(symbol, data_6m, data_full):
             lines.append(line)
             labels.append(f'{ma_name} ({period}-day)')
     
+    # === 繪製布林通道 ===
+    bb_lower_line = None
+    bb_upper_line = None
+    bb_fill = None
+    
+    if 'BB_upper' in data_6m.columns:
+        bb_upper_line, = ax1.plot(data_6m.index, data_6m['BB_upper'], 
+                                   label='Bollinger Bands', 
+                                   linewidth=1.5, 
+                                   color='#FFA07A', 
+                                   linestyle='-', 
+                                   alpha=0.7, 
+                                   visible=False)  # 初始隱藏
+        bb_lower_line, = ax1.plot(data_6m.index, data_6m['BB_lower'], 
+                                   linewidth=1.5, 
+                                   color='#FFA07A', 
+                                   linestyle='-', 
+                                   alpha=0.7, 
+                                   visible=False)  # 初始隱藏
+        bb_fill = ax1.fill_between(data_6m.index, data_6m['BB_upper'], data_6m['BB_lower'], 
+                                    color='lightgrey', alpha=0.5, visible=False)  # 初始隱藏
+        
+        lines.append(bb_upper_line)
+        labels.append('Bollinger Bands')
+    
     # 圖表設定
     ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators", 
                  fontsize=16, fontweight='bold', pad=20)
@@ -152,11 +177,9 @@ def create_interactive_chart(symbol, data_6m, data_full):
             origline.set_visible(visible)
             
             # 如果是布林通道，同步切換上下軌和填充區域
-            if 'Bollinger' in origline.get_label():
-                # 切換下軌線
+            if origline == bb_upper_line:
                 if bb_lower_line is not None:
                     bb_lower_line.set_visible(visible)
-                # 切換填充區域
                 if bb_fill is not None:
                     bb_fill.set_visible(visible)
             
