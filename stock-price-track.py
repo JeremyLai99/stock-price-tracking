@@ -24,14 +24,22 @@ MA_PERIODS = {
     'MA200': (200, '#9B59B6', '-.')
 }
 
+# 布林通道參數
+BOLLINGER_PERIOD = 20
+BOLLINGER_STD = 2
+
 def create_interactive_chart(symbol, data_6m, data_full):
     """創建互動式圖表"""
     
-    # 創建圖表和軸
-    fig, ax = plt.subplots(figsize=(12, 7))
+    # 創建圖表和軸（上方為價格圖，下方為成交量圖）
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), 
+                                     gridspec_kw={'height_ratios': [3, 1]},
+                                     sharex=True)
+    
+    # === 上方圖表：股價 + MA + 布林通道 ===
     
     # 繪製股價
-    price_line, = ax.plot(data_6m.index, data_6m['Close'], 
+    price_line, = ax1.plot(data_6m.index, data_6m['Close'], 
                           label=f'{symbol} Close Price', 
                           linewidth=3, 
                           color='#2C3E50',
@@ -46,7 +54,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
     # 繪製所有移動平均線（初始全部隱藏，但要確保圖例中可見）
     for ma_name, (period, color, style) in MA_PERIODS.items():
         if ma_name in data_6m.columns:
-            line, = ax.plot(data_6m.index, data_6m[ma_name], 
+            line, = ax1.plot(data_6m.index, data_6m[ma_name], 
                            label=f'{ma_name} ({period}-day)', 
                            linewidth=2.5,  # 增加圖表線條粗細
                            color=color,
@@ -59,16 +67,14 @@ def create_interactive_chart(symbol, data_6m, data_full):
             labels.append(f'{ma_name} ({period}-day)')
     
     # 圖表設定
-    ax.set_title(f"{symbol} - 6 Month Price Chart with Multiple Moving Averages", 
+    ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators", 
                  fontsize=16, fontweight='bold', pad=20)
-    ax.set_xlabel("Date", fontsize=12)
-    ax.set_ylabel("Price (USD)", fontsize=12)
-    ax.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
-    plt.xticks(rotation=45)
+    ax1.set_ylabel("Price (USD)", fontsize=12)
+    ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
     
     # 添加最新價格標註
     latest_price = data_6m['Close'].iloc[-1]
-    ax.annotate(f'Latest: ${latest_price:.2f}', 
+    ax1.annotate(f'Latest: ${latest_price:.2f}', 
                 xy=(data_6m.index[-1], latest_price),
                 xytext=(10, 10), textcoords='offset points',
                 bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', alpha=0.7),
@@ -76,8 +82,45 @@ def create_interactive_chart(symbol, data_6m, data_full):
                 fontweight='bold',
                 arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
     
+    # === 下方圖表：成交量 ===
+    
+    if 'Volume' in data_6m.columns:
+        # 計算顏色（漲紅跌綠）
+        colors = []
+        for i in range(len(data_6m)):
+            if i == 0:
+                colors.append('#808080')  # 第一天用灰色
+            else:
+                if data_6m['Close'].iloc[i] >= data_6m['Close'].iloc[i-1]:
+                    colors.append('#EF5350')  # 紅色 = 上漲
+                else:
+                    colors.append('#26A69A')  # 綠色 = 下跌
+        
+        # 繪製成交量柱狀圖，設定寬度為1天
+        ax2.bar(data_6m.index, data_6m['Volume'], 
+                color=colors, 
+                alpha=0.7,
+                width=1.0,  # 增加寬度確保填滿
+                edgecolor='none')
+        
+        ax2.set_ylabel('Volume', fontsize=12, fontweight='bold')
+        ax2.set_xlabel('Date', fontsize=12)
+        ax2.grid(True, alpha=0.3, linestyle='-', linewidth=0.5, axis='y')
+        
+        # 格式化成交量數字
+        ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
+        
+        # 添加成交量說明
+        ax2.text(0.02, 0.95, '🔴 Red = Up Day | 🟢 Green = Down Day', 
+                transform=ax2.transAxes,
+                fontsize=9,
+                verticalalignment='top',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+    
+    plt.xticks(rotation=45)
+    
     # 創建可點擊的圖例（確保所有線條樣本都清晰可見）
-    leg = ax.legend(loc='upper left', 
+    leg = ax1.legend(loc='upper left', 
                     fontsize=11, 
                     framealpha=0.95,
                     edgecolor='black',
@@ -108,14 +151,23 @@ def create_interactive_chart(symbol, data_6m, data_full):
             visible = not origline.get_visible()
             origline.set_visible(visible)
             
+            # 如果是布林通道，同步切換上下軌和填充區域
+            if 'Bollinger' in origline.get_label():
+                # 切換下軌線
+                if bb_lower_line is not None:
+                    bb_lower_line.set_visible(visible)
+                # 切換填充區域
+                if bb_fill is not None:
+                    bb_fill.set_visible(visible)
+            
             # 圖表線條顯示/隱藏，但圖例線條保持清晰可見
             fig.canvas.draw()
     
     fig.canvas.mpl_connect('pick_event', on_pick)
     
     # 添加使用說明（移到右上角避免與圖例重疊）
-    ax.text(0.98, 0.98, '💡 Click legend to toggle lines', 
-            transform=ax.transAxes,
+    ax1.text(0.98, 0.98, '💡 Click legend to toggle lines', 
+            transform=ax1.transAxes,
             fontsize=9,
             verticalalignment='top',
             horizontalalignment='right',
@@ -158,13 +210,33 @@ for i, symbol in enumerate(symbols):
         for ma_name, (period, _, _) in MA_PERIODS.items():
             data[ma_name] = data['Close'].rolling(window=period).mean()
         
+        # 計算布林通道
+        print(f"   Calculating Bollinger Bands...")
+        data['BB_middle'] = data['Close'].rolling(window=BOLLINGER_PERIOD).mean()
+        data['BB_std'] = data['Close'].rolling(window=BOLLINGER_PERIOD).std()
+        data['BB_upper'] = data['BB_middle'] + (BOLLINGER_STD * data['BB_std'])
+        data['BB_lower'] = data['BB_middle'] - (BOLLINGER_STD * data['BB_std'])
+        
+        # 檢查布林通道是否計算成功
+        if not data['BB_upper'].isnull().all():
+            print(f"   ✅ Bollinger Bands calculated successfully")
+        else:
+            print(f"   ⚠️ Warning: Bollinger Bands calculation may have issues")
+        
         # 取最近6個月顯示
         data_6m = data.tail(130)
         
         # 創建互動式圖表
         print(f"   Creating interactive chart...")
+        
+        # 調試：檢查 data_6m 中是否有布林通道資料
+        print(f"   Debug: BB_upper in data_6m? {'BB_upper' in data_6m.columns}")
+        if 'BB_upper' in data_6m.columns:
+            print(f"   Debug: BB_upper有效值數量: {data_6m['BB_upper'].notna().sum()}/{len(data_6m)}")
+        
         fig = create_interactive_chart(symbol, data_6m, data)
         
+        print(f"   Chart created successfully!")
         plt.show()
         
         # 計算統計資訊
