@@ -337,7 +337,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
                 label += ' ⭐'
             
             text = ax1.text(data_6m.index[-1], price, 
-                           f'  {label}',
+                           f'  {label} (${price:.2f})',
                            verticalalignment='center',
                            color=color,
                            fontsize=8 if is_preview else 9,
@@ -347,11 +347,14 @@ def create_interactive_chart(symbol, data_6m, data_full):
     
     def on_fib_click(event):
         """處理費波那契工具的點擊"""
+        print(f"Fib click event: Active={fib_state['active']}, Step={fib_state['step']}, Ignore={fib_state['ignore_next_click']}")  # 調試
+        
         if not fib_state['active']:
             return
         
         # 如果需要忽略這次點擊（剛從圖例啟動）
         if fib_state['ignore_next_click']:
+            print("Ignoring first click after activation")
             fib_state['ignore_next_click'] = False
             return
         
@@ -366,6 +369,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             return
         
         if fib_state['step'] == 0:
+            print(f"Setting first point at ({xdata}, {ydata})")
             fib_state['point1'] = (xdata, ydata)
             fib_state['step'] = 1
             
@@ -380,6 +384,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             fig.canvas.draw_idle()
             
         elif fib_state['step'] == 1:
+            print(f"Setting second point at ({xdata}, {ydata})")
             fib_state['point2'] = (xdata, ydata)
             fib_state['step'] = 2
             
@@ -404,6 +409,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             update_status_text(f'✅ Fibonacci set! High: ${high:.2f} | Low: ${low:.2f} | Range: ${high-low:.2f} | Click tool to redraw')
             
             fib_state['active'] = False
+            print(f"Fibonacci completed. Active now: {fib_state['active']}")
             fig.canvas.draw_idle()
     
     def on_fib_motion(event):
@@ -430,35 +436,63 @@ def create_interactive_chart(symbol, data_6m, data_full):
     
     def on_key_press(event):
         """處理鍵盤事件"""
-        if event.key == 'escape' and fib_state['active']:
-            # 重置費波那契工具狀態
-            fib_state['active'] = False
-            fib_state['step'] = 0
-            fib_state['point1'] = None
-            fib_state['point2'] = None
-            fib_state['ignore_next_click'] = False
+        # 調試：打印按鍵信息
+        print(f"Key pressed: {event.key}, Fib active: {fib_state['active']}")
+        
+        if event.key == 'escape':
+            # 情況1：工具啟動中，取消繪製過程
+            if fib_state['active']:
+                print("ESC detected - canceling Fibonacci tool (drawing in progress)")
+                
+                # 重置費波那契工具狀態
+                fib_state['active'] = False
+                fib_state['step'] = 0
+                fib_state['point1'] = None
+                fib_state['point2'] = None
+                fib_state['ignore_next_click'] = False
+                
+                # 清除預覽線條
+                clear_fib_preview()
+                
+                # 清除所有標記（紅點、藍點、十字線）
+                for marker in fib_state['markers']:
+                    try:
+                        marker.remove()
+                    except (ValueError, AttributeError):
+                        pass
+                fib_state['markers'] = []
+                
+                # 清除狀態文字
+                if fib_state['status_text'] is not None:
+                    try:
+                        fib_state['status_text'].remove()
+                    except (ValueError, AttributeError):
+                        pass
+                    fib_state['status_text'] = None
+                
+                print("Fibonacci tool canceled and cleared")
+                
+                # 強制重繪圖表
+                fig.canvas.draw()
             
-            # 清除預覽線條
-            clear_fib_preview()
-            
-            # 清除所有標記（紅點、藍點、十字線）
-            for marker in fib_state['markers']:
-                try:
-                    marker.remove()
-                except (ValueError, AttributeError):
-                    pass
-            fib_state['markers'] = []
-            
-            # 清除狀態文字
-            if fib_state['status_text'] is not None:
-                try:
-                    fib_state['status_text'].remove()
-                except (ValueError, AttributeError):
-                    pass
-                fib_state['status_text'] = None
-            
-            # 強制重繪圖表
-            fig.canvas.draw()
+            # 情況2：已完成繪製，清除已繪製的費波那契線條
+            elif len(fib_state['final_lines']) > 0 or len(fib_state['final_texts']) > 0 or len(fib_state['markers']) > 0:
+                print("ESC detected - clearing completed Fibonacci lines")
+                
+                clear_fib_final()
+                
+                # 清除狀態文字
+                if fib_state['status_text'] is not None:
+                    try:
+                        fib_state['status_text'].remove()
+                    except (ValueError, AttributeError):
+                        pass
+                    fib_state['status_text'] = None
+                
+                print("Completed Fibonacci lines cleared")
+                
+                # 強制重繪圖表
+                fig.canvas.draw()
     
     def on_pick(event):
         """點擊圖例切換線條顯示"""
@@ -469,7 +503,20 @@ def create_interactive_chart(symbol, data_6m, data_full):
             
             # 如果點擊費波那契工具
             if origline == special_elements['fib_tool']:
+                # 如果已有繪製完成的費波那契線條，先清除
+                if len(fib_state['final_lines']) > 0 or len(fib_state['final_texts']) > 0 or len(fib_state['markers']) > 0:
+                    print("Clearing existing Fibonacci lines before activating tool...")
+                    clear_fib_final()
+                    if fib_state['status_text'] is not None:
+                        try:
+                            fib_state['status_text'].remove()
+                        except (ValueError, AttributeError):
+                            pass
+                        fib_state['status_text'] = None
+                
+                # 啟動工具
                 if not fib_state['active']:
+                    print("Activating Fibonacci tool...")  # 調試訊息
                     fib_state['active'] = True
                     fib_state['step'] = 0
                     fib_state['point1'] = None
@@ -478,6 +525,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
                     clear_fib_final()
                     clear_fib_preview()
                     update_status_text('📐 Step 1: Click on the FIRST point (High or Low) | ESC to cancel')
+                    print(f"Fibonacci tool activated. Active: {fib_state['active']}, Step: {fib_state['step']}")  # 調試訊息
                     fig.canvas.draw_idle()
                 return
             
