@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 plt.rcParams['axes.unicode_minus'] = False
 plt.style.use('default')
 
-print("✅ Setup completed successfully")
+print("Setup completed successfully")
 print("=" * 60)
 
 # 定義移動平均線參數
@@ -162,7 +162,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
     
     # 添加費波那契工具到圖例（使用隱藏線條）
     fib_tool_line, = ax1.plot([], [], 
-                             label='📐 Fibonacci Tool (Click to Draw)',
+                             label='[Fib] Fibonacci Tool (Click to Draw)',
                              linewidth=0,
                              marker='o',
                              markersize=8,
@@ -171,7 +171,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
                              pickradius=5)
     special_elements['fib_tool'] = fib_tool_line
     lines.append(fib_tool_line)
-    labels.append('📐 Fibonacci Tool (Click to Draw)')
+    labels.append('[Fib] Fibonacci Tool (Click to Draw)')
     
     # 圖表設定
     ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators", 
@@ -218,7 +218,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
         ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
         
         # 添加成交量說明
-        ax2.text(0.02, 0.95, '🔴 Red = Up Day | 🟢 Green = Down Day', 
+        ax2.text(0.02, 0.95, 'Red = Up Day | Green = Down Day', 
                 transform=ax2.transAxes,
                 fontsize=9,
                 verticalalignment='top',
@@ -334,7 +334,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             percentage = level * 100
             label = f'{percentage:.1f}%'
             if level == 0.618 and not is_preview:
-                label += ' ⭐'
+                label += ' *GOLD*'
             
             text = ax1.text(data_6m.index[-1], price, 
                            f'  {label} (${price:.2f})',
@@ -380,7 +380,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             hline = ax1.axhline(y=ydata, color='red', linestyle=':', alpha=0.5, linewidth=1)
             fib_state['markers'].extend([vline, hline])
             
-            update_status_text(f'📐 Step 2: Move mouse to preview, click to confirm | First: ${ydata:.2f} | ESC to cancel')
+            update_status_text(f'[Fib] Step 2: Move mouse to preview, click to confirm | First: ${ydata:.2f} | ESC to cancel')
             fig.canvas.draw_idle()
             
         elif fib_state['step'] == 1:
@@ -406,7 +406,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
             
             high = max(y1, y2)
             low = min(y1, y2)
-            update_status_text(f'✅ Fibonacci set! High: ${high:.2f} | Low: ${low:.2f} | Range: ${high-low:.2f} | Click tool to redraw')
+            update_status_text(f'[OK] Fibonacci set! High: ${high:.2f} | Low: ${low:.2f} | Range: ${high-low:.2f} | Click tool to redraw')
             
             fib_state['active'] = False
             print(f"Fibonacci completed. Active now: {fib_state['active']}")
@@ -524,7 +524,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
                     fib_state['ignore_next_click'] = True  # 忽略這次圖例點擊
                     clear_fib_final()
                     clear_fib_preview()
-                    update_status_text('📐 Step 1: Click on the FIRST point (High or Low) | ESC to cancel')
+                    update_status_text('[Fib] Step 1: Click on the FIRST point (High or Low) | ESC to cancel')
                     print(f"Fibonacci tool activated. Active: {fib_state['active']}, Step: {fib_state['step']}")  # 調試訊息
                     fig.canvas.draw_idle()
                 return
@@ -550,7 +550,7 @@ def create_interactive_chart(symbol, data_6m, data_full):
     fig.canvas.mpl_connect('key_press_event', on_key_press)
     
     # 添加使用說明
-    ax1.text(0.98, 0.98, '💡 Click legend to toggle | 📐 Fib Tool: Click-Move-Click', 
+    ax1.text(0.98, 0.98, 'TIP: Click legend to toggle | Fib Tool: Click-Move-Click', 
             transform=ax1.transAxes,
             fontsize=9,
             verticalalignment='top',
@@ -569,13 +569,13 @@ print("=" * 60)
 
 for i, symbol in enumerate(symbols):
     try:
-        print(f"\n📊 Analyzing {symbol} ({i+1}/{len(symbols)})")
+        print(f"\n[Analyzing] {symbol} ({i+1}/{len(symbols)})")
         print(f"   Downloading data for {symbol}...")
         
         data = yf.download(symbol, period="15mo", progress=False)
         
         if data.empty:
-            print(f"❌ No data found for {symbol}. Please check if the symbol is correct.")
+            print(f"[X] No data found for {symbol}. Please check if the symbol is correct.")
             print(f"   Skipping {symbol}...\n")
             continue
         
@@ -583,10 +583,10 @@ for i, symbol in enumerate(symbols):
             data.columns = data.columns.droplevel(1)
         
         if 'Close' not in data.columns or len(data) < 50:
-            print(f"⚠️ Insufficient data for {symbol}. Skipping...")
+            print(f"[!] Insufficient data for {symbol}. Skipping...")
             continue
         
-        print(f"   ✅ Successfully downloaded {len(data)} days of data")
+        print(f"   [OK] Successfully downloaded {len(data)} days of data")
         
         print(f"   Calculating moving averages...")
         for ma_name, (period, _, _) in MA_PERIODS.items():
@@ -599,9 +599,9 @@ for i, symbol in enumerate(symbols):
         data['BB_lower'] = data['BB_middle'] - (BOLLINGER_STD * data['BB_std'])
         
         if not data['BB_upper'].isnull().all():
-            print(f"   ✅ Bollinger Bands calculated successfully")
+            print(f"   [OK] Bollinger Bands calculated successfully")
         else:
-            print(f"   ⚠️ Warning: Bollinger Bands calculation may have issues")
+            print(f"   [!] Warning: Bollinger Bands calculation may have issues")
         
         data_6m = data.tail(130)
         
@@ -609,7 +609,7 @@ for i, symbol in enumerate(symbols):
         
         fig = create_interactive_chart(symbol, data_6m, data)
         
-        print(f"   ✅ Chart created successfully!")
+        print(f"   [OK] Chart created successfully!")
         plt.show(block=False)  # 不阻塞，讓程式繼續執行
         plt.pause(0.1)  # 短暫暫停確保視窗顯示
         
@@ -627,7 +627,7 @@ for i, symbol in enumerate(symbols):
         drawdown = (data_6m['Close'] - rolling_max) / rolling_max * 100
         max_drawdown = drawdown.min()
         
-        print(f"\n📈 {symbol} Analysis Results:")
+        print(f"\n[Results] {symbol} Analysis Results:")
         print(f"   Latest Price: ${end_price:.2f}")
         print(f"   6-Month Return: {return_rate:+.2f}%")
         print(f"   Average Price: ${avg_price:.2f}")
@@ -637,7 +637,7 @@ for i, symbol in enumerate(symbols):
         print(f"   Annualized Volatility: {volatility:.1f}%")
         print(f"   Maximum Drawdown: {max_drawdown:.1f}%")
         
-        print(f"\n📊 Moving Averages (Latest Values):")
+        print(f"\n[MA Values] Moving Averages (Latest Values):")
         for ma_name, (period, _, _) in MA_PERIODS.items():
             if ma_name in data_6m.columns and not pd.isna(data_6m[ma_name].iloc[-1]):
                 ma_value = data_6m[ma_name].iloc[-1]
@@ -647,20 +647,20 @@ for i, symbol in enumerate(symbols):
         if 'MA20' in data_6m.columns:
             current_vs_ma20 = data_6m['Close'].iloc[-1] / data_6m['MA20'].iloc[-1]
             if current_vs_ma20 > 1.02:
-                trend = "📈 Strong (Price well above MA20)"
+                trend = "[++] Strong (Price well above MA20)"
             elif current_vs_ma20 > 1.00:
-                trend = "📊 Neutral-Bullish"
+                trend = "[+] Neutral-Bullish"
             elif current_vs_ma20 > 0.98:
-                trend = "📊 Neutral-Bearish"
+                trend = "[-] Neutral-Bearish"
             else:
-                trend = "📉 Weak (Price well below MA20)"
+                trend = "[--] Weak (Price well below MA20)"
             print(f"   Technical Trend: {trend}")
         
     except KeyboardInterrupt:
-        print(f"\n⚠️ Analysis interrupted by user")
+        print(f"\n[!] Analysis interrupted by user")
         break
     except Exception as e:
-        print(f"❌ Error analyzing {symbol}: {str(e)}")
+        print(f"[X] Error analyzing {symbol}: {str(e)}")
         print(f"   Skipping {symbol}...")
         import traceback
         traceback.print_exc()
@@ -668,10 +668,10 @@ for i, symbol in enumerate(symbols):
     
     print("-" * 60)
 
-print(f"\n✅ Analysis completed! Processed {len(symbols)} stocks")
-print("\n💡 Tip: Click on legend items to show/hide MA lines")
-print("📐 Tip: Click 'Fibonacci Tool' in legend to draw retracement levels")
-print("\n⚠️  All charts are now displayed. Close all chart windows to exit the program.")
+print(f"\n[OK] Analysis completed! Processed {len(symbols)} stocks")
+print("\n[TIP] Click on legend items to show/hide MA lines")
+print("[TIP] Click 'Fibonacci Tool' in legend to draw retracement levels")
+print("\n[INFO] All charts are now displayed. Close all chart windows to exit the program.")
 
 # 保持圖表視窗開啟，直到使用者關閉所有視窗
 plt.show()
