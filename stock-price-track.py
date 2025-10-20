@@ -40,62 +40,61 @@ FIBONACCI_COLORS = {
     1.0: '#808080'
 }
 
+
 def create_multi_stock_chart(stocks_data):
-    """創建多股票切換圖表（使用單選框）"""
-    
+    """創建多股票切換圖表（使用自訂水平單選按鈕）"""
+
     symbols = list(stocks_data.keys())
     num_symbols = len(symbols)
-    
+
     # 創建圖表
     fig = plt.figure(figsize=(14, 10))
-    
-    # 計算單選框需要的高度
-    radio_height = 0.08 if num_symbols <= 5 else 0.12
-    
-    # 調整布局 - 為單選框預留頂部空間
-    gs = fig.add_gridspec(2, 1, 
-                          height_ratios=[3, 1], 
-                          hspace=0.25,
-                          top=0.92,
-                          bottom=0.08)
-    
+
+    # 計算單選框需要的高度（保留上方空間）
+    gs = fig.add_gridspec(2, 1,
+                          height_ratios=[3, 1],
+                          hspace=0.05,
+                          top=0.82,
+                          bottom=0.1)
+
     ax1 = fig.add_subplot(gs[0, 0])  # 價格圖
     ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)  # 成交量圖
-    
-    # 創建單選框區域
-    if num_symbols <= 3:
-        radio_width = 0.15 * num_symbols
-        radio_ax = fig.add_axes([0.5 - radio_width/2, 0.94, radio_width, 0.05])
-    elif num_symbols <= 5:
-        radio_width = 0.12 * num_symbols
-        radio_ax = fig.add_axes([0.5 - radio_width/2, 0.94, radio_width, 0.05])
-    else:
-        radio_width = 0.8
-        radio_ax = fig.add_axes([0.1, 0.93, radio_width, 0.06])
-    
-    # 創建單選框
-    radio = RadioButtons(radio_ax, symbols, active=0)
-    
-    # 美化單選框 - 使用 try-except 處理不同版本的 matplotlib
-    try:
-        for circle in radio.circles:
-            circle.set_radius(0.08)
-            circle.set_edgecolor('black')
-            circle.set_linewidth(1.5)
-    except AttributeError:
-        # 較新版本的 matplotlib 可能沒有 circles 屬性
-        pass
-    
-    try:
-        for label in radio.labels:
-            label.set_fontsize(11)
-            label.set_fontweight('bold')
-    except AttributeError:
-        pass
+
+    # === 建立自訂的水平 Radio Button（放在標題上方）===
+    radio_ypos = 0.955  # 整排往上提
+    fig.subplots_adjust(top=0.84 - num_symbols * 0.002)  # 不同股票數量下自動調整間距
+
+    # 建立自訂區域（整排橫向）
+    radio_ax = fig.add_axes([0.05, radio_ypos, 0.9, 0.06])
+    radio_ax.set_xlim(0, 1)
+    radio_ax.set_ylim(0, 1)
+    radio_ax.axis('off')
+
+    # 每個選項的間距
+    spacing = 1 / max(num_symbols, 1)
+
+    # 儲存文字標籤資料
+    radio_buttons = []
+
+    for i, symbol in enumerate(symbols):
+        x_pos = (i + 0.5) * spacing
+        # 直接建立文字標籤（可點擊）
+        label = radio_ax.text(
+        x_pos, 0.5, symbol,
+        ha='center', va='center',
+        fontsize=12, fontweight='bold',
+        color='red' if i == 0 else 'black',  # 第一個預設紅色（選中）
+        transform=radio_ax.transAxes
+        )
+
+        radio_buttons.append(label)
+
+    # 第一個預設為選取狀態
+    active_index = [0]
     
     # 當前顯示的股票索引
     current_stock = {'index': 0}
-    
+
     # 費波那契工具狀態（每個股票獨立）
     fib_states = {}
     for symbol in stocks_data.keys():
@@ -113,7 +112,7 @@ def create_multi_stock_chart(stocks_data):
             'status_text': None,
             'ignore_next_click': False
         }
-    
+
     # 特殊元素（每個股票獨立）
     special_elements = {}
     for symbol in stocks_data.keys():
@@ -127,52 +126,52 @@ def create_multi_stock_chart(stocks_data):
             'leg': None,
             'lined': {}
         }
-    
+
     def get_current_symbol():
         return list(stocks_data.keys())[current_stock['index']]
-    
+
     def get_current_fib_state():
         return fib_states[get_current_symbol()]
-    
+
     def get_current_elements():
         return special_elements[get_current_symbol()]
-    
+
     def clear_axes():
         ax1.clear()
         ax2.clear()
-    
+
     def draw_stock_chart(symbol):
         clear_axes()
-        
+
         data_6m = stocks_data[symbol]['data_6m']
         fib_state = fib_states[symbol]
         elements = special_elements[symbol]
-        
+
         # 繪製價格圖
-        price_line, = ax1.plot(data_6m.index, data_6m['Close'], 
-                              label=f'{symbol} Close Price', 
-                              linewidth=3, 
+        price_line, = ax1.plot(data_6m.index, data_6m['Close'],
+                              label=f'{symbol} Close Price',
+                              linewidth=3,
                               color='#2C3E50',
                               zorder=10,
                               picker=True,
                               pickradius=5)
-        
+
         lines = [price_line]
-        
+
         # 繪製移動平均線
         for ma_name, (period, color, style) in MA_PERIODS.items():
             if ma_name in data_6m.columns:
-                line, = ax1.plot(data_6m.index, data_6m[ma_name], 
-                               label=f'{ma_name} ({period}-day)', 
-                               linewidth=2.5,
-                               color=color,
-                               linestyle=style,
-                               alpha=1.0,
-                               picker=True,
-                               pickradius=5,
-                               visible=False)
+                line, = ax1.plot(data_6m.index, data_6m[ma_name],
+                                 label=f'{ma_name} ({period}-day)',
+                                 linewidth=2.5,
+                                 color=color,
+                                 linestyle=style,
+                                 alpha=1.0,
+                                 picker=True,
+                                 pickradius=5,
+                                 visible=False)
                 lines.append(line)
-        
+
         # 繪製布林通道
         if 'BB_upper' in data_6m.columns and not data_6m['BB_upper'].isnull().all():
             bb_upper, = ax1.plot(data_6m.index, data_6m['BB_upper'],
@@ -186,7 +185,7 @@ def create_multi_stock_chart(stocks_data):
                                 visible=False)
             elements['bb_upper_line'] = bb_upper
             lines.append(bb_upper)
-            
+
             bb_middle, = ax1.plot(data_6m.index, data_6m['BB_middle'],
                                  linewidth=1,
                                  color='#FF6B9D',
@@ -194,7 +193,7 @@ def create_multi_stock_chart(stocks_data):
                                  alpha=0.5,
                                  visible=False)
             elements['bb_middle_line'] = bb_middle
-            
+
             bb_lower, = ax1.plot(data_6m.index, data_6m['BB_lower'],
                                 linewidth=1.5,
                                 color='#FF6B9D',
@@ -202,43 +201,43 @@ def create_multi_stock_chart(stocks_data):
                                 alpha=0.7,
                                 visible=False)
             elements['bb_lower_line'] = bb_lower
-            
-            bb_fill = ax1.fill_between(data_6m.index, 
-                                        data_6m['BB_upper'], 
-                                        data_6m['BB_lower'],
-                                        alpha=0.1,
-                                        color='#FF6B9D',
-                                        visible=False)
+
+            bb_fill = ax1.fill_between(data_6m.index,
+                                       data_6m['BB_upper'],
+                                       data_6m['BB_lower'],
+                                       alpha=0.1,
+                                       color='#FF6B9D',
+                                       visible=False)
             elements['bb_fill'] = bb_fill
-        
+
         # 添加費波那契工具
-        fib_tool_line, = ax1.plot([], [], 
-                                 label='[Fib] Fibonacci Tool (Click to Draw)',
-                                 linewidth=0,
-                                 marker='o',
-                                 markersize=8,
-                                 color='orange',
-                                 picker=True,
-                                 pickradius=5)
+        fib_tool_line, = ax1.plot([], [],
+                                  label='[Fib] Fibonacci Tool (Click to Draw)',
+                                  linewidth=0,
+                                  marker='o',
+                                  markersize=8,
+                                  color='orange',
+                                  picker=True,
+                                  pickradius=5)
         elements['fib_tool'] = fib_tool_line
         lines.append(fib_tool_line)
-        
+
         # 圖表設定
-        ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators", 
-                     fontsize=16, fontweight='bold', pad=20)
+        ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators",
+                      fontsize=16, fontweight='bold', pad=20)
         ax1.set_ylabel("Price (USD)", fontsize=12)
         ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
-        
+
         # 最新價格標註
         latest_price = data_6m['Close'].iloc[-1]
-        ax1.annotate(f'Latest: ${latest_price:.2f}', 
-                    xy=(data_6m.index[-1], latest_price),
-                    xytext=(10, 10), textcoords='offset points',
-                    bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', alpha=0.7),
-                    fontsize=11,
-                    fontweight='bold',
-                    arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
-        
+        ax1.annotate(f'Latest: ${latest_price:.2f}',
+                     xy=(data_6m.index[-1], latest_price),
+                     xytext=(10, 10), textcoords='offset points',
+                     bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', alpha=0.7),
+                     fontsize=11,
+                     fontweight='bold',
+                     arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
+
         # 繪製成交量圖
         if 'Volume' in data_6m.columns:
             colors = []
@@ -250,37 +249,41 @@ def create_multi_stock_chart(stocks_data):
                         colors.append('#EF5350')
                     else:
                         colors.append('#26A69A')
-            
-            ax2.bar(data_6m.index, data_6m['Volume'], 
-                    color=colors, 
+
+            ax2.bar(data_6m.index, data_6m['Volume'],
+                    color=colors,
                     alpha=0.7,
                     width=1.0,
                     edgecolor='none')
-            
+
             ax2.set_ylabel('Volume', fontsize=12, fontweight='bold')
             ax2.set_xlabel('Date', fontsize=12)
             ax2.grid(True, alpha=0.3, linestyle='-', linewidth=0.5, axis='y')
             ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
-            
-            ax2.text(0.02, 0.95, 'Red = Up Day | Green = Down Day', 
-                    transform=ax2.transAxes,
-                    fontsize=9,
-                    verticalalignment='top',
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+
+            ax2.text(0.02, 0.95, 'Red = Up Day | Green = Down Day',
+                     transform=ax2.transAxes,
+                     fontsize=9,
+                     verticalalignment='top',
+                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+
         
-        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
-        
+        # X 軸日期設定：主圖不顯示日期，成交量顯示水平文字
+        ax1.tick_params(labelbottom=False)  # 隱藏主圖的日期標籤
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0, ha='center')  # 成交量時間軸水平顯示
+        ax2.xaxis.set_tick_params(labelsize=9)
+
         # 創建圖例
-        leg = ax1.legend(loc='upper left', 
-                        fontsize=11, 
-                        framealpha=0.95,
-                        edgecolor='black',
-                        fancybox=True,
-                        shadow=True)
-        
+        leg = ax1.legend(loc='upper left',
+                         fontsize=11,
+                         framealpha=0.95,
+                         edgecolor='black',
+                         fancybox=True,
+                         shadow=True)
+
         elements['leg'] = leg
         elements['lines'] = lines
-        
+
         # 設定圖例可互動
         lined = {}
         for legline, origline in zip(leg.get_lines(), lines):
@@ -289,12 +292,19 @@ def create_multi_stock_chart(stocks_data):
             legline.set_linewidth(4)
             legline.set_alpha(1.0)
             legline.set_visible(True)
-            legline.set_color(origline.get_color())
-            legline.set_linestyle(origline.get_linestyle())
+            # 為沒有 color 屬性的 object 做保護
+            try:
+                legline.set_color(origline.get_color())
+            except Exception:
+                pass
+            try:
+                legline.set_linestyle(origline.get_linestyle())
+            except Exception:
+                pass
             lined[legline] = origline
-        
+
         elements['lined'] = lined
-        
+
         # 恢復已繪製的費波那契線條
         if len(fib_state['final_lines']) > 0:
             for line in fib_state['final_lines']:
@@ -302,17 +312,17 @@ def create_multi_stock_chart(stocks_data):
                     ax1.add_line(line)
             for text in fib_state['final_texts']:
                 ax1.add_artist(text)
-        
+
         # 添加使用說明
-        ax1.text(0.98, 0.98, 'TIP: Click legend to toggle | Fib Tool: Click-Move-Click', 
-                transform=ax1.transAxes,
-                fontsize=9,
-                verticalalignment='top',
-                horizontalalignment='right',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='lightyellow', alpha=0.8))
-        
+        ax1.text(0.98, 0.98, 'TIP: Click legend to toggle | Fib Tool: Click-Move-Click',
+                 transform=ax1.transAxes,
+                 fontsize=9,
+                 verticalalignment='top',
+                 horizontalalignment='right',
+                 bbox=dict(boxstyle='round,pad=0.4', facecolor='lightyellow', alpha=0.8))
+
         fig.canvas.draw_idle()
-    
+
     # === 費波那契工具函數 ===
     def clear_fib_preview():
         fib_state = get_current_fib_state()
@@ -334,7 +344,7 @@ def create_multi_stock_chart(stocks_data):
             except (ValueError, AttributeError):
                 pass
             fib_state['connect_line'] = None
-    
+
     def clear_fib_final():
         fib_state = get_current_fib_state()
         for line in fib_state['final_lines']:
@@ -355,7 +365,7 @@ def create_multi_stock_chart(stocks_data):
         fib_state['final_lines'] = []
         fib_state['final_texts'] = []
         fib_state['markers'] = []
-    
+
     def update_status_text(message):
         fib_state = get_current_fib_state()
         if fib_state['status_text'] is not None:
@@ -367,139 +377,139 @@ def create_multi_stock_chart(stocks_data):
                                             transform=ax1.transAxes,
                                             ha='center',
                                             fontsize=10,
-                                            bbox=dict(boxstyle='round,pad=0.5', 
-                                                     facecolor='lightyellow', 
+                                            bbox=dict(boxstyle='round,pad=0.5',
+                                                     facecolor='lightyellow',
                                                      alpha=0.9))
-    
+
     def draw_fib_lines(x1, y1, x2, y2, is_preview=True):
         fib_state = get_current_fib_state()
         symbol = get_current_symbol()
         data_6m = stocks_data[symbol]['data_6m']
-        
+
         high_price = max(y1, y2)
         low_price = min(y1, y2)
         price_range = high_price - low_price
-        
+
         if price_range < 0.01:
             return
-        
+
         lines_list = fib_state['preview_lines'] if is_preview else fib_state['final_lines']
         texts_list = fib_state['preview_texts'] if is_preview else fib_state['final_texts']
         alpha_val = 0.4 if is_preview else 0.8
         linestyle = ':' if is_preview else '--'
         linewidth = 1 if is_preview else 1.5
-        
+
         for level in FIBONACCI_LEVELS:
             price = high_price - (price_range * level)
             color = FIBONACCI_COLORS[level]
-            
-            line = ax1.axhline(y=price, 
-                              color=color, 
-                              linestyle=linestyle,
-                              linewidth=linewidth if level != 0.618 else linewidth + 0.5,
-                              alpha=alpha_val)
+
+            line = ax1.axhline(y=price,
+                               color=color,
+                               linestyle=linestyle,
+                               linewidth=linewidth if level != 0.618 else linewidth + 0.5,
+                               alpha=alpha_val)
             lines_list.append(line)
-            
+
             percentage = level * 100
             label = f'{percentage:.1f}%'
             if level == 0.618 and not is_preview:
                 label += ' *GOLD*'
-            
-            text = ax1.text(data_6m.index[-1], price, 
-                           f'  {label} (${price:.2f})',
-                           verticalalignment='center',
-                           color=color,
-                           fontsize=8 if is_preview else 9,
-                           fontweight='bold' if level == 0.618 else 'normal',
-                           alpha=alpha_val + 0.2)
+
+            text = ax1.text(data_6m.index[-1], price,
+                            f'  {label} (${price:.2f})',
+                            verticalalignment='center',
+                            color=color,
+                            fontsize=8 if is_preview else 9,
+                            fontweight='bold' if level == 0.618 else 'normal',
+                            alpha=alpha_val + 0.2)
             texts_list.append(text)
-    
+
     def on_fib_click(event):
         fib_state = get_current_fib_state()
-        
+
         if not fib_state['active']:
             return
-        
+
         if fib_state['ignore_next_click']:
             fib_state['ignore_next_click'] = False
             return
-        
+
         if event.inaxes != ax1:
             return
-        
+
         xdata = event.xdata
         ydata = event.ydata
-        
+
         if xdata is None or ydata is None:
             return
-        
+
         if fib_state['step'] == 0:
             fib_state['point1'] = (xdata, ydata)
             fib_state['step'] = 1
-            
+
             marker = ax1.plot(xdata, ydata, 'ro', markersize=8, zorder=20)[0]
             fib_state['markers'].append(marker)
-            
+
             vline = ax1.axvline(x=xdata, color='red', linestyle=':', alpha=0.5, linewidth=1)
             hline = ax1.axhline(y=ydata, color='red', linestyle=':', alpha=0.5, linewidth=1)
             fib_state['markers'].extend([vline, hline])
-            
+
             update_status_text(f'[Fib] Step 2: Move mouse to preview, click to confirm | First: ${ydata:.2f} | ESC to cancel')
             fig.canvas.draw_idle()
-            
+
         elif fib_state['step'] == 1:
             fib_state['point2'] = (xdata, ydata)
             fib_state['step'] = 2
-            
+
             marker = ax1.plot(xdata, ydata, 'bo', markersize=8, zorder=20)[0]
             fib_state['markers'].append(marker)
-            
+
             vline = ax1.axvline(x=xdata, color='blue', linestyle=':', alpha=0.5, linewidth=1)
             hline = ax1.axhline(y=ydata, color='blue', linestyle=':', alpha=0.5, linewidth=1)
             fib_state['markers'].extend([vline, hline])
-            
+
             clear_fib_preview()
             x1, y1 = fib_state['point1']
             x2, y2 = fib_state['point2']
             draw_fib_lines(x1, y1, x2, y2, is_preview=False)
-            
-            fib_state['connect_line'] = ax1.plot([x1, x2], [y1, y2], 
-                                                  'k--', alpha=0.3, linewidth=1)[0]
+
+            fib_state['connect_line'] = ax1.plot([x1, x2], [y1, y2],
+                                                'k--', alpha=0.3, linewidth=1)[0]
             fib_state['final_lines'].append(fib_state['connect_line'])
-            
+
             high = max(y1, y2)
             low = min(y1, y2)
             update_status_text(f'[OK] Fibonacci set! High: ${high:.2f} | Low: ${low:.2f} | Range: ${high-low:.2f} | Click tool to redraw')
-            
+
             fib_state['active'] = False
             fig.canvas.draw_idle()
-    
+
     def on_fib_motion(event):
         fib_state = get_current_fib_state()
-        
+
         if not fib_state['active'] or fib_state['step'] != 1 or event.inaxes != ax1:
             return
-        
+
         xdata = event.xdata
         ydata = event.ydata
-        
+
         if xdata is None or ydata is None:
             return
-        
+
         clear_fib_preview()
-        
+
         x1, y1 = fib_state['point1']
         draw_fib_lines(x1, y1, xdata, ydata, is_preview=True)
-        
-        fib_state['connect_line'] = ax1.plot([x1, xdata], [y1, ydata], 
-                                              'gray', linestyle=':', alpha=0.3, linewidth=1)[0]
+
+        fib_state['connect_line'] = ax1.plot([x1, xdata], [y1, ydata],
+                                            'gray', linestyle=':', alpha=0.3, linewidth=1)[0]
         fib_state['preview_lines'].append(fib_state['connect_line'])
-        
+
         fig.canvas.draw_idle()
-    
+
     def on_key_press(event):
         fib_state = get_current_fib_state()
-        
+
         if event.key == 'escape':
             if fib_state['active']:
                 fib_state['active'] = False
@@ -507,47 +517,48 @@ def create_multi_stock_chart(stocks_data):
                 fib_state['point1'] = None
                 fib_state['point2'] = None
                 fib_state['ignore_next_click'] = False
-                
+
                 clear_fib_preview()
-                
+
                 for marker in fib_state['markers']:
                     try:
                         marker.remove()
                     except (ValueError, AttributeError):
                         pass
                 fib_state['markers'] = []
-                
+
                 if fib_state['status_text'] is not None:
                     try:
                         fib_state['status_text'].remove()
                     except (ValueError, AttributeError):
                         pass
                     fib_state['status_text'] = None
-                
+
                 fig.canvas.draw()
-            
+
             elif len(fib_state['final_lines']) > 0 or len(fib_state['final_texts']) > 0 or len(fib_state['markers']) > 0:
                 clear_fib_final()
-                
+
                 if fib_state['status_text'] is not None:
                     try:
                         fib_state['status_text'].remove()
                     except (ValueError, AttributeError):
                         pass
                     fib_state['status_text'] = None
-                
+
                 fig.canvas.draw()
-    
+
     def on_pick(event):
         elements = get_current_elements()
         fib_state = get_current_fib_state()
-        
+
         legline = event.artist
-        
+
         if legline in elements['lined']:
             origline = elements['lined'][legline]
-            
+
             if origline == elements['fib_tool']:
+                # 使用者點了 Fib 工具圖例：開啟/重置 Fib 模式
                 if len(fib_state['final_lines']) > 0 or len(fib_state['final_texts']) > 0 or len(fib_state['markers']) > 0:
                     clear_fib_final()
                     if fib_state['status_text'] is not None:
@@ -556,7 +567,7 @@ def create_multi_stock_chart(stocks_data):
                         except (ValueError, AttributeError):
                             pass
                         fib_state['status_text'] = None
-                
+
                 if not fib_state['active']:
                     fib_state['active'] = True
                     fib_state['step'] = 0
@@ -568,43 +579,62 @@ def create_multi_stock_chart(stocks_data):
                     update_status_text('[Fib] Step 1: Click on the FIRST point (High or Low) | ESC to cancel')
                     fig.canvas.draw_idle()
                 return
-            
+
+            # 否則切換顯示/隱藏
             visible = not origline.get_visible()
             origline.set_visible(visible)
-            
-            if origline == elements['bb_upper_line']:
-                if elements['bb_lower_line'] is not None:
+
+            if origline == elements.get('bb_upper_line'):
+                if elements.get('bb_lower_line') is not None:
                     elements['bb_lower_line'].set_visible(visible)
-                if elements['bb_middle_line'] is not None:
+                if elements.get('bb_middle_line') is not None:
                     elements['bb_middle_line'].set_visible(visible)
-                if elements['bb_fill'] is not None:
+                if elements.get('bb_fill') is not None:
                     elements['bb_fill'].set_visible(visible)
-            
+
             fig.canvas.draw()
-    
-    # 單選框切換回調函數
-    def on_radio_clicked(label):
+
+    # 單選框切換回調函數（改為使用自訂水平按鈕）
+    def on_radio_clicked_symbol_by_label(label):
+        # 不再使用內建 radio 元件，此函式保留以備呼叫位置一致性（如需）
         idx = symbols.index(label)
         current_stock['index'] = idx
         draw_stock_chart(label)
-    
-    radio.on_clicked(on_radio_clicked)
-    
+
+    # 改為使用自訂按鈕的 click handler
+    def on_radio_click(event):
+        for i, label in enumerate(radio_buttons):
+            contains, _ = label.contains(event)
+            if contains:
+                active_index[0] = i
+                # 更新文字顏色（選中紅色，其他黑色）
+                for j, lbl in enumerate(radio_buttons):
+                    lbl.set_color('red' if j == i else 'black')
+                current_stock['index'] = i
+                draw_stock_chart(symbols[i])
+                fig.canvas.draw_idle()
+                break
+
+
+
     # 綁定事件
+    fig.canvas.mpl_connect('button_press_event', on_radio_click)
     fig.canvas.mpl_connect('pick_event', on_pick)
     fig.canvas.mpl_connect('button_press_event', on_fib_click)
     fig.canvas.mpl_connect('motion_notify_event', on_fib_motion)
     fig.canvas.mpl_connect('key_press_event', on_key_press)
-    
+
     # 添加說明文字
     if num_symbols > 1:
-        fig.text(0.5, 0.005, f'Select stock above to switch between {num_symbols} stocks | Click legend items to toggle indicators', 
-                ha='center', fontsize=9, style='italic', color='gray')
-    
+        fig.text(0.5, 0.005, f'Select stock above to switch between {num_symbols} stocks | Click legend items to toggle indicators',
+                 ha='center', fontsize=9, style='italic', color='gray')
+
     # 初始繪製第一個股票
-    draw_stock_chart(symbols[0])
-    
-    return fig, radio
+    if len(symbols) > 0:
+        draw_stock_chart(symbols[0])
+
+    return fig, radio_buttons
+
 
 # 主程式
 symbols_input = input("Enter US stock symbols separated by comma (e.g., AAPL,MSFT,TSLA): ")
@@ -620,60 +650,60 @@ for i, symbol in enumerate(symbols):
     try:
         print(f"\n[Analyzing] {symbol} ({i+1}/{len(symbols)})")
         print(f"   Downloading data for {symbol}...")
-        
+
         data = yf.download(symbol, period="15mo", progress=False)
-        
+
         if data.empty:
             print(f"[X] No data found for {symbol}. Please check if the symbol is correct.")
             print(f"   Skipping {symbol}...\n")
             continue
-        
+
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.droplevel(1)
-        
+
         if 'Close' not in data.columns or len(data) < 50:
             print(f"[!] Insufficient data for {symbol}. Skipping...")
             continue
-        
+
         print(f"   [OK] Successfully downloaded {len(data)} days of data")
-        
+
         print(f"   Calculating moving averages...")
         for ma_name, (period, _, _) in MA_PERIODS.items():
             data[ma_name] = data['Close'].rolling(window=period).mean()
-        
+
         print(f"   Calculating Bollinger Bands...")
         data['BB_middle'] = data['Close'].rolling(window=BOLLINGER_PERIOD).mean()
         data['BB_std'] = data['Close'].rolling(window=BOLLINGER_PERIOD).std()
         data['BB_upper'] = data['BB_middle'] + (BOLLINGER_STD * data['BB_std'])
         data['BB_lower'] = data['BB_middle'] - (BOLLINGER_STD * data['BB_std'])
-        
+
         if not data['BB_upper'].isnull().all():
             print(f"   [OK] Bollinger Bands calculated successfully")
         else:
             print(f"   [!] Warning: Bollinger Bands calculation may have issues")
-        
+
         data_6m = data.tail(130)
-        
+
         # 儲存數據
         stocks_data[symbol] = {
             'data_6m': data_6m,
             'data_full': data
         }
-        
+
         # 計算統計資訊
         start_price = data_6m["Close"].iloc[0]
         end_price = data_6m["Close"].iloc[-1]
         return_rate = (end_price - start_price) / start_price * 100
-        
+
         max_price = data_6m["Close"].max()
         min_price = data_6m["Close"].min()
         avg_price = data_6m["Close"].mean()
         volatility = data_6m["Close"].pct_change().std() * np.sqrt(252) * 100
-        
+
         rolling_max = data_6m['Close'].expanding().max()
         drawdown = (data_6m['Close'] - rolling_max) / rolling_max * 100
         max_drawdown = drawdown.min()
-        
+
         print(f"\n[Results] {symbol} Analysis Results:")
         print(f"   Latest Price: ${end_price:.2f}")
         print(f"   6-Month Return: {return_rate:+.2f}%")
@@ -683,14 +713,14 @@ for i, symbol in enumerate(symbols):
         print(f"   Price Range: {((max_price-min_price)/min_price*100):.1f}%")
         print(f"   Annualized Volatility: {volatility:.1f}%")
         print(f"   Maximum Drawdown: {max_drawdown:.1f}%")
-        
+
         print(f"\n[MA Values] Moving Averages (Latest Values):")
         for ma_name, (period, _, _) in MA_PERIODS.items():
             if ma_name in data_6m.columns and not pd.isna(data_6m[ma_name].iloc[-1]):
                 ma_value = data_6m[ma_name].iloc[-1]
                 diff_pct = ((end_price - ma_value) / ma_value) * 100
                 print(f"   {ma_name}: ${ma_value:.2f} ({diff_pct:+.2f}% from current)")
-        
+
         if 'MA20' in data_6m.columns:
             current_vs_ma20 = data_6m['Close'].iloc[-1] / data_6m['MA20'].iloc[-1]
             if current_vs_ma20 > 1.02:
@@ -702,7 +732,7 @@ for i, symbol in enumerate(symbols):
             else:
                 trend = "[--] Weak (Price well below MA20)"
             print(f"   Technical Trend: {trend}")
-        
+
     except KeyboardInterrupt:
         print(f"\n[!] Analysis interrupted by user")
         break
@@ -712,7 +742,7 @@ for i, symbol in enumerate(symbols):
         import traceback
         traceback.print_exc()
         continue
-    
+
     print("-" * 60)
 
 print(f"\n[OK] Analysis completed! Processed {len(stocks_data)} stocks")
@@ -721,16 +751,16 @@ print(f"\n[OK] Analysis completed! Processed {len(stocks_data)} stocks")
 if len(stocks_data) > 0:
     print("\n[TIP] Click on legend items to show/hide MA lines")
     print("[TIP] Click 'Fibonacci Tool' in legend to draw retracement levels")
-    
+
     if len(stocks_data) > 1:
         print(f"[TIP] Use radio buttons at the top to switch between {len(stocks_data)} stocks")
-    
+
     print("\n[INFO] Creating interactive chart...")
-    
-    fig, radio = create_multi_stock_chart(stocks_data)
-    
+
+    fig, radio_buttons = create_multi_stock_chart(stocks_data)
+
     print("[INFO] Chart displayed. Close the chart window to exit the program.")
-    
+
     # 顯示圖表（阻塞直到關閉）
     plt.show()
 else:
