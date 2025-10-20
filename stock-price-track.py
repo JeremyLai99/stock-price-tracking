@@ -62,7 +62,7 @@ def create_multi_stock_chart(stocks_data):
 
     # === 建立自訂的水平 Radio Button（放在標題上方）===
     radio_ypos = 0.955  # 整排往上提
-    fig.subplots_adjust(top=0.84 - num_symbols * 0.002)  # 不同股票數量下自動調整間距
+    fig.subplots_adjust(top=0.82 - num_symbols * 0.002)  # 不同股票數量下自動調整間距
 
     # 建立自訂區域（整排橫向）
     radio_ax = fig.add_axes([0.05, radio_ypos, 0.9, 0.06])
