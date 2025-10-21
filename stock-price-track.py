@@ -50,22 +50,21 @@ def create_multi_stock_chart(stocks_data):
     # 創建圖表
     fig = plt.figure(figsize=(14, 10))
 
-    # 計算單選框需要的高度（保留上方空間）
+    # 優化間距設計：調整 top 和 hspace
     gs = fig.add_gridspec(2, 1,
                           height_ratios=[3, 1],
-                          hspace=0.05,
-                          top=0.82,
-                          bottom=0.1)
+                          hspace=0.15,  # 增加主圖與成交量圖的間距
+                          top=0.85,     # 降低主圖頂部，為選項區留更多空間
+                          bottom=0.10)
 
     ax1 = fig.add_subplot(gs[0, 0])  # 價格圖
     ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)  # 成交量圖
 
-    # === 建立自訂的水平 Radio Button（放在標題上方）===
-    radio_ypos = 0.955  # 整排往上提
-    fig.subplots_adjust(top=0.82 - num_symbols * 0.002)  # 不同股票數量下自動調整間距
-
+    # === 建立自訂的水平 Radio Button（保持你的原始設計）===
+    radio_ypos = 0.93  # 選項區位置（稍微下移避免太擠）
+    
     # 建立自訂區域（整排橫向）
-    radio_ax = fig.add_axes([0.05, radio_ypos, 0.9, 0.06])
+    radio_ax = fig.add_axes([0.05, radio_ypos, 0.9, 0.055])
     radio_ax.set_xlim(0, 1)
     radio_ax.set_ylim(0, 1)
     radio_ax.axis('off')
@@ -78,13 +77,18 @@ def create_multi_stock_chart(stocks_data):
 
     for i, symbol in enumerate(symbols):
         x_pos = (i + 0.5) * spacing
-        # 直接建立文字標籤（可點擊）
+        # 建立文字標籤（可點擊）- 優化字體和顏色
         label = radio_ax.text(
-        x_pos, 0.5, symbol,
-        ha='center', va='center',
-        fontsize=12, fontweight='bold',
-        color='red' if i == 0 else 'black',  # 第一個預設紅色（選中）
-        transform=radio_ax.transAxes
+            x_pos, 0.5, symbol,
+            ha='center', va='center',
+            fontsize=13,  # 稍微加大字體
+            fontweight='bold',
+            color='#FF4444' if i == 0 else '#333333',  # 選中用亮紅色，未選用深灰色
+            bbox=dict(boxstyle='round,pad=0.5', 
+                     facecolor='#FFF3CD' if i == 0 else '#F8F9FA',  # 選中用淺黃底，未選用淺灰底
+                     edgecolor='#FF4444' if i == 0 else '#CCCCCC',
+                     linewidth=2 if i == 0 else 1),
+            transform=radio_ax.transAxes
         )
 
         radio_buttons.append(label)
@@ -222,9 +226,9 @@ def create_multi_stock_chart(stocks_data):
         elements['fib_tool'] = fib_tool_line
         lines.append(fib_tool_line)
 
-        # 圖表設定
+        # 圖表設定 - 調整標題間距
         ax1.set_title(f"{symbol} - 6 Month Price Chart with Technical Indicators",
-                      fontsize=16, fontweight='bold', pad=20)
+                      fontsize=16, fontweight='bold', pad=12)  # 減少 pad 讓標題更靠近圖表
         ax1.set_ylabel("Price (USD)", fontsize=12)
         ax1.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
 
@@ -269,8 +273,8 @@ def create_multi_stock_chart(stocks_data):
 
         
         # X 軸日期設定：主圖不顯示日期，成交量顯示水平文字
-        ax1.tick_params(labelbottom=False)  # 隱藏主圖的日期標籤
-        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0, ha='center')  # 成交量時間軸水平顯示
+        ax1.tick_params(labelbottom=False)
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0, ha='center')
         ax2.xaxis.set_tick_params(labelsize=9)
 
         # 創建圖例
@@ -292,7 +296,6 @@ def create_multi_stock_chart(stocks_data):
             legline.set_linewidth(4)
             legline.set_alpha(1.0)
             legline.set_visible(True)
-            # 為沒有 color 屬性的 object 做保護
             try:
                 legline.set_color(origline.get_color())
             except Exception:
@@ -558,7 +561,6 @@ def create_multi_stock_chart(stocks_data):
             origline = elements['lined'][legline]
 
             if origline == elements['fib_tool']:
-                # 使用者點了 Fib 工具圖例：開啟/重置 Fib 模式
                 if len(fib_state['final_lines']) > 0 or len(fib_state['final_texts']) > 0 or len(fib_state['markers']) > 0:
                     clear_fib_final()
                     if fib_state['status_text'] is not None:
@@ -580,7 +582,6 @@ def create_multi_stock_chart(stocks_data):
                     fig.canvas.draw_idle()
                 return
 
-            # 否則切換顯示/隱藏
             visible = not origline.get_visible()
             origline.set_visible(visible)
 
@@ -594,28 +595,30 @@ def create_multi_stock_chart(stocks_data):
 
             fig.canvas.draw()
 
-    # 單選框切換回調函數（改為使用自訂水平按鈕）
-    def on_radio_clicked_symbol_by_label(label):
-        # 不再使用內建 radio 元件，此函式保留以備呼叫位置一致性（如需）
-        idx = symbols.index(label)
-        current_stock['index'] = idx
-        draw_stock_chart(label)
-
-    # 改為使用自訂按鈕的 click handler
+    # 改為使用自訂按鈕的 click handler（保持你的原始設計）
     def on_radio_click(event):
         for i, label in enumerate(radio_buttons):
             contains, _ = label.contains(event)
             if contains:
                 active_index[0] = i
-                # 更新文字顏色（選中紅色，其他黑色）
+                # 更新文字顏色和背景（優化視覺效果）
                 for j, lbl in enumerate(radio_buttons):
-                    lbl.set_color('red' if j == i else 'black')
+                    if j == i:
+                        lbl.set_color('#FF4444')  # 選中：亮紅色
+                        lbl.set_bbox(dict(boxstyle='round,pad=0.5', 
+                                         facecolor='#FFF3CD',  # 淺黃底
+                                         edgecolor='#FF4444', 
+                                         linewidth=2))
+                    else:
+                        lbl.set_color('#333333')  # 未選：深灰色
+                        lbl.set_bbox(dict(boxstyle='round,pad=0.5', 
+                                         facecolor='#F8F9FA',  # 淺灰底
+                                         edgecolor='#CCCCCC', 
+                                         linewidth=1))
                 current_stock['index'] = i
                 draw_stock_chart(symbols[i])
                 fig.canvas.draw_idle()
                 break
-
-
 
     # 綁定事件
     fig.canvas.mpl_connect('button_press_event', on_radio_click)
@@ -624,10 +627,10 @@ def create_multi_stock_chart(stocks_data):
     fig.canvas.mpl_connect('motion_notify_event', on_fib_motion)
     fig.canvas.mpl_connect('key_press_event', on_key_press)
 
-    # 添加說明文字
+    # 添加說明文字 - 調整位置
     if num_symbols > 1:
-        fig.text(0.5, 0.005, f'Select stock above to switch between {num_symbols} stocks | Click legend items to toggle indicators',
-                 ha='center', fontsize=9, style='italic', color='gray')
+        fig.text(0.5, 0.02, f'Select stock above to switch between {num_symbols} stocks | Click legend items to toggle indicators',
+                 ha='center', fontsize=9, style='italic', color='#666666')  # 使用深灰色更柔和
 
     # 初始繪製第一個股票
     if len(symbols) > 0:
